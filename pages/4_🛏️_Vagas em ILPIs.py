@@ -24,9 +24,6 @@ right_on = 'Código da Entidade'
 # Faz o merge das planilhas de acordo com o código
 df_mesclado = pd.merge(df_respostas, df_cadastro, left_on=left_on, right_on=right_on)
 
-print(df_mesclado.columns)
-
-
 # Criar mapa Folium
 mapa = folium.Map(location=[-22.56, -47.40], zoom_start=10)
 
@@ -47,5 +44,5 @@ for index, row in df_mesclado.iterrows():
             ).add_to(mapa)
 
 # Exibir o mapa no Streamlit
-st.title("ILPIs de Limeira")
+# st.title("ILPIs de Limeira")
 st_folium(mapa)
