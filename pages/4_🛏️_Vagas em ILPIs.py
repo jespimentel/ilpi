@@ -9,57 +9,43 @@ st.header("Vagas em ILPIs")
 # Create a connection object.
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-#df = conn.read()
-planilha = conn.read(worksheet="cadastro", ttl=600)
-dados_ilpis = pd.DataFrame(planilha)
-st.dataframe(dados_ilpis)
+# Lê a planilha de respostas ao questionário
+df_respostas = conn.read(worksheet="respostas", ttl=600)
 
-# Dados dos locais de interesse
-data = {
-    "Nome": ["Recanto da Felicidade", "VILLA DO SOSSEGO Pousada", "Lar Fraterno da Acácia", "Cantinho da Vovó"],
-    "Classificação": [5, 4.4, 4.5, None],
-    "Link Google Maps": ["https://goo.gl/maps/z42z6923927z2z379", "https://goo.gl/maps/z42z6923927z2z379", "https://goo.gl/maps/z42z6923927z2z379", "https://goo.gl/maps/z42z6923927z2z379"],
-    "Tipo": ["Alojamento", "Alojamento", "Organização sem fins lucrativos", "Restaurante"],
-    "Detalhes": [
-        "Classificação: 5 estrelas",
-        "Pousada casual à beira-rio em uma fazenda de café com piscinas coberta e externa, além de um bar e um lounge. Aberto 24 horas por dia, 7 dias por semana. Telefone: +55 19 3898-1251. [Site](http://www.villadosossego.com.br/)",
-        "Telefone: +55 12 3962-1994. Classificação: 4,5 estrelas",
-        "Aberto de segunda a sexta, das 8h às 19h. Telefone: +55 11 3596-5606"
-    ],
-    # Adicione as colunas latitude e longitude (se você tiver essas informações)
-    "Latitude": [-23.50, -23.53, -23.60, -22.99],  # Substitua por seus valores de latitude
-    "Longitude": [-46.7, -46.9, -45.9, -44.55]   # Substitua por seus valores de longitude
-}
+# Coluna comum
+left_on= 'Informe o código da sua entidade (fornecido pelo MPSP)'
 
-df = pd.DataFrame(data)
+# Lê a planilha de cadastro
+df_cadastro = conn.read(worksheet="cadastro", ttl=600)
+
+# Coluna comum
+right_on = 'Código da Entidade'
+
+# Faz o merge das planilhas de acordo com o código
+df_mesclado = pd.merge(df_respostas, df_cadastro, left_on=left_on, right_on=right_on)
+
+print(df_mesclado.columns)
+
 
 # Criar mapa Folium
-mapa = folium.Map(location=[-23.55, -46.66], zoom_start=12)
+mapa = folium.Map(location=[-22.56, -47.40], zoom_start=10)
 
 # Adicionar marcadores ao mapa
-for index, row in df.iterrows():
-    nome = row["Nome"]
-    classificacao = row["Classificação"]
-    link_google_maps = row["Link Google Maps"]
-    tipo = row["Tipo"]
-    detalhes = row["Detalhes"]
-    latitude = row["Latitude"]
-    longitude = row["Longitude"]
+for index, row in df_mesclado.iterrows():
+    if not pd.isna(row['Lat']):
+        latitude = row['Lat']
+        longitude = row['Long']
+        vagas = row['Informe o número de vagas em aberto']
+        mensalidade = row['Informe o valor da mensalidade.']
 
-    popup_html = f"""
-    <h5>{nome}</h5>
-    <p><b>Classificação:</b> {classificacao if classificacao else '-'}</p>
-    <p><b>Tipo:</b> {tipo}</p>
-    <p>{detalhes}</p>
-    <a href="{link_google_maps}" target="_blank">Ver no Google Maps</a>
-    """
+        # Texto do popup
+        texto_popup = f"Vagas: {vagas:.0f}<br>Mensalidade: {mensalidade}"
 
-    folium.Marker([latitude, longitude], popup=folium.Popup(popup_html)).add_to(mapa)
-
-# Adicionar controles de zoom e localização ao mapa
-#mapa.add_control(folium.ZoomControl())
-#mapa.add_control(folium.LocateControl())
+        folium.Marker(
+            [latitude, longitude],
+            popup=folium.Popup(html=texto_popup, max_width=300)
+            ).add_to(mapa)
 
 # Exibir o mapa no Streamlit
-st.title("Mapa dos Locais de Interesse")
+st.title("ILPIs de Limeira")
 st_folium(mapa)
